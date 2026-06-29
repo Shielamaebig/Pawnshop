@@ -1,4 +1,4 @@
-import type { LoanTerm } from '../types/pawn'
+import type { LoanTerm, PawnStatus } from '../types/pawn'
 
 const TERM_MULTIPLIERS: Record<LoanTerm, number> = {
   15: 0.5,
@@ -9,6 +9,14 @@ const TERM_MULTIPLIERS: Record<LoanTerm, number> = {
 
 function roundMoney(value: number): number {
   return Math.round((value + Number.EPSILON) * 100) / 100
+}
+
+function parseUtcDate(value: string): Date {
+  return new Date(`${value}T00:00:00Z`)
+}
+
+function toIsoDate(value: Date): string {
+  return value.toISOString().slice(0, 10)
 }
 
 export function calculateInterest(
@@ -24,18 +32,48 @@ export function calculateInterest(
 export function calculateTotalPayable(
   loanAmount: number,
   interestAmount: number,
-  serviceFee: number,
+  serviceCharge: number,
+  storageFee = 0,
   penaltyFee = 0,
 ): number {
-  return roundMoney(loanAmount + interestAmount + serviceFee + penaltyFee)
+  return roundMoney(loanAmount + interestAmount + serviceCharge + storageFee + penaltyFee)
 }
 
 export function calculateExpectedEarning(
   interestAmount: number,
-  serviceFee: number,
+  serviceCharge: number,
+  storageFee = 0,
   penaltyFee = 0,
 ): number {
-  return roundMoney(interestAmount + serviceFee + penaltyFee)
+  return roundMoney(interestAmount + serviceCharge + storageFee + penaltyFee)
+}
+
+export function addDays(date: string, days: number): string {
+  const value = parseUtcDate(date)
+  value.setUTCDate(value.getUTCDate() + days)
+  return toIsoDate(value)
+}
+
+export function calculateOverdueDays(
+  dueDate: string,
+  status: PawnStatus,
+  redeemedDate?: string,
+  today = new Date(),
+): number {
+  const comparisonDate = status === 'Redeemed' && redeemedDate ? parseUtcDate(redeemedDate) : today
+  const due = parseUtcDate(dueDate)
+  const elapsedMs =
+    Date.UTC(
+      comparisonDate.getUTCFullYear(),
+      comparisonDate.getUTCMonth(),
+      comparisonDate.getUTCDate(),
+    ) - Date.UTC(due.getUTCFullYear(), due.getUTCMonth(), due.getUTCDate())
+
+  return Math.max(0, Math.floor(elapsedMs / 86_400_000))
+}
+
+export function calculatePenalty(dailyPenaltyFee: number, overdueDays: number): number {
+  return roundMoney(dailyPenaltyFee * overdueDays)
 }
 
 export function formatCurrency(value: number): string {

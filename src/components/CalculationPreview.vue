@@ -1,11 +1,17 @@
 <script setup lang="ts">
-import type { LoanCalculation, PawnForm } from '../types/pawn'
+import type { LoanCalculation, LoanSettings, PawnForm } from '../types/pawn'
 import { formatCurrency } from '../utils/calculations'
 
 defineProps<{
   form: PawnForm
+  settings: LoanSettings
   calculation: LoanCalculation
+  overdueDays: number
 }>()
+
+function isVehicleCategory(form: PawnForm): boolean {
+  return form.itemCategory === 'Vehicle' || form.itemCategory === 'Vehicle Lending'
+}
 </script>
 
 <template>
@@ -25,7 +31,7 @@ defineProps<{
       </div>
       <div>
         <dt>Monthly Interest Rate</dt>
-        <dd>{{ form.interestRate || 0 }}%</dd>
+        <dd>{{ settings.monthlyInterestRate || 0 }}%</dd>
       </div>
       <div>
         <dt>Loan Term</dt>
@@ -36,12 +42,18 @@ defineProps<{
         <dd data-testid="preview-interest">{{ formatCurrency(calculation.interestAmount) }}</dd>
       </div>
       <div>
-        <dt>Service Fee</dt>
-        <dd>{{ formatCurrency(form.serviceFee) }}</dd>
+        <dt>Service Charge</dt>
+        <dd>{{ formatCurrency(settings.serviceCharge) }}</dd>
+      </div>
+      <div v-if="isVehicleCategory(form)">
+        <dt>Storage Fee</dt>
+        <dd data-testid="preview-storage-fee">{{ formatCurrency(settings.vehicleStorageFee) }}</dd>
       </div>
       <div>
-        <dt>Penalty Fee</dt>
-        <dd>{{ formatCurrency(form.penaltyFee) }}</dd>
+        <dt>Penalty</dt>
+        <dd>
+          {{ formatCurrency(settings.dailyPenaltyFee) }}/day × {{ overdueDays }} days
+        </dd>
       </div>
     </dl>
 
@@ -53,7 +65,7 @@ defineProps<{
     <div class="earning-callout">
       <div>
         <span>Expected Pawnshop Earning</span>
-        <small>Interest + service fee + penalty</small>
+        <small>Interest + service charge + storage fee + penalty</small>
       </div>
       <strong data-testid="preview-earning">{{ formatCurrency(calculation.expectedEarning) }}</strong>
     </div>

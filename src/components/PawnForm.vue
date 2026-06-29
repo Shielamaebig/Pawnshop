@@ -1,75 +1,70 @@
 <script setup lang="ts">
-import { reactive } from 'vue'
-import type { ItemCategory, LoanTerm, PawnForm } from '../types/pawn'
+import { reactive } from "vue";
+import type { ItemCategory, LoanTerm, PawnForm } from "../types/pawn";
 
-const form = defineModel<PawnForm>({ required: true })
+const form = defineModel<PawnForm>({ required: true });
 
 const emit = defineEmits<{
-  submit: []
-}>()
+  submit: [];
+}>();
 
-type FormField = keyof PawnForm
-type FormErrors = Partial<Record<FormField, string>>
+type FormField = keyof PawnForm;
+type FormErrors = Partial<Record<FormField, string>>;
 
-const errors = reactive<FormErrors>({})
+const errors = reactive<FormErrors>({});
 
-const categories: ItemCategory[] = ['Jewelry', 'Gadget', 'Appliance', 'Vehicle', 'Other']
+const categories: ItemCategory[] = [
+  "Jewelry",
+  "Gadget",
+  "Appliance",
+  "Vehicle",
+  "Vehicle Lending",
+  "Other",
+];
 const terms: Array<{ value: LoanTerm; label: string }> = [
-  { value: 15, label: '15 days' },
-  { value: 30, label: '30 days' },
-  { value: 60, label: '60 days' },
-  { value: 90, label: '90 days' },
-]
+  { value: 15, label: "15 days" },
+  { value: 30, label: "30 days" },
+  { value: 60, label: "60 days" },
+  { value: 90, label: "90 days" },
+];
 
 function clearError(field: FormField) {
-  delete errors[field]
+  delete errors[field];
 }
 
 function validate(): boolean {
-  Object.keys(errors).forEach((key) => delete errors[key as FormField])
+  Object.keys(errors).forEach((key) => delete errors[key as FormField]);
 
   const requiredTextFields: Array<{ field: FormField; label: string }> = [
-    { field: 'clientName', label: 'Client name' },
-    { field: 'contactNumber', label: 'Contact number' },
-    { field: 'itemName', label: 'Item name' },
-    { field: 'itemDescription', label: 'Item description' },
-    { field: 'pawnDate', label: 'Pawn date' },
-  ]
+    { field: "clientName", label: "Client name" },
+    { field: "contactNumber", label: "Contact number" },
+    { field: "itemName", label: "Item name" },
+    { field: "itemDescription", label: "Item description" },
+    { field: "pawnDate", label: "Pawn date" },
+  ];
 
   requiredTextFields.forEach(({ field, label }) => {
     if (!String(form.value[field]).trim()) {
-      errors[field] = `${label} is required.`
+      errors[field] = `${label} is required.`;
     }
-  })
+  });
 
   if (form.value.appraisedValue <= 0) {
-    errors.appraisedValue = 'Appraised value must be greater than 0.'
+    errors.appraisedValue = "Appraised value must be greater than 0.";
   }
 
   if (form.value.loanAmount <= 0) {
-    errors.loanAmount = 'Loan amount must be greater than 0.'
+    errors.loanAmount = "Loan amount must be greater than 0.";
   } else if (form.value.loanAmount > form.value.appraisedValue) {
-    errors.loanAmount = 'Loan amount cannot exceed the appraised value.'
+    errors.loanAmount = "Loan amount cannot exceed the appraised value.";
   }
 
-  if (form.value.interestRate <= 0) {
-    errors.interestRate = 'Interest rate must be greater than 0.'
-  }
-
-  if (form.value.serviceFee < 0) {
-    errors.serviceFee = 'Service fee cannot be negative.'
-  }
-
-  if (form.value.penaltyFee < 0) {
-    errors.penaltyFee = 'Penalty fee cannot be negative.'
-  }
-
-  return Object.keys(errors).length === 0
+  return Object.keys(errors).length === 0;
 }
 
 function handleSubmit() {
   if (validate()) {
-    emit('submit')
+    emit("submit");
   }
 }
 </script>
@@ -101,7 +96,9 @@ function handleSubmit() {
             :aria-invalid="Boolean(errors.clientName)"
             @input="clearError('clientName')"
           />
-          <small v-if="errors.clientName" class="field-error">{{ errors.clientName }}</small>
+          <small v-if="errors.clientName" class="field-error">{{
+            errors.clientName
+          }}</small>
         </div>
 
         <div class="field">
@@ -114,7 +111,9 @@ function handleSubmit() {
             :aria-invalid="Boolean(errors.contactNumber)"
             @input="clearError('contactNumber')"
           />
-          <small v-if="errors.contactNumber" class="field-error">{{ errors.contactNumber }}</small>
+          <small v-if="errors.contactNumber" class="field-error">{{
+            errors.contactNumber
+          }}</small>
         </div>
       </div>
     </fieldset>
@@ -132,13 +131,19 @@ function handleSubmit() {
             :aria-invalid="Boolean(errors.itemName)"
             @input="clearError('itemName')"
           />
-          <small v-if="errors.itemName" class="field-error">{{ errors.itemName }}</small>
+          <small v-if="errors.itemName" class="field-error">{{
+            errors.itemName
+          }}</small>
         </div>
 
         <div class="field">
           <label for="item-category">Item Category <b>*</b></label>
           <select id="item-category" v-model="form.itemCategory">
-            <option v-for="category in categories" :key="category" :value="category">
+            <option
+              v-for="category in categories"
+              :key="category"
+              :value="category"
+            >
               {{ category }}
             </option>
           </select>
@@ -197,26 +202,9 @@ function handleSubmit() {
               @input="clearError('loanAmount')"
             />
           </div>
-          <small v-if="errors.loanAmount" class="field-error">{{ errors.loanAmount }}</small>
-        </div>
-
-        <div class="field">
-          <label for="interest-rate">Interest Rate <b>*</b></label>
-          <div class="suffix-input">
-            <input
-              id="interest-rate"
-              v-model.number="form.interestRate"
-              type="number"
-              min="0"
-              step="0.1"
-              :aria-invalid="Boolean(errors.interestRate)"
-              @input="clearError('interestRate')"
-            />
-            <span>%</span>
-          </div>
-          <small v-if="errors.interestRate" class="field-error">
-            {{ errors.interestRate }}
-          </small>
+          <small v-if="errors.loanAmount" class="field-error">{{
+            errors.loanAmount
+          }}</small>
         </div>
 
         <div class="field">
@@ -229,40 +217,6 @@ function handleSubmit() {
         </div>
 
         <div class="field">
-          <label for="service-fee">Service Fee <b>*</b></label>
-          <div class="money-input">
-            <span>₱</span>
-            <input
-              id="service-fee"
-              v-model.number="form.serviceFee"
-              type="number"
-              min="0"
-              step="50"
-              :aria-invalid="Boolean(errors.serviceFee)"
-              @input="clearError('serviceFee')"
-            />
-          </div>
-          <small v-if="errors.serviceFee" class="field-error">{{ errors.serviceFee }}</small>
-        </div>
-
-        <div class="field">
-          <label for="penalty-fee">Penalty Fee <span>(Optional)</span></label>
-          <div class="money-input">
-            <span>₱</span>
-            <input
-              id="penalty-fee"
-              v-model.number="form.penaltyFee"
-              type="number"
-              min="0"
-              step="50"
-              :aria-invalid="Boolean(errors.penaltyFee)"
-              @input="clearError('penaltyFee')"
-            />
-          </div>
-          <small v-if="errors.penaltyFee" class="field-error">{{ errors.penaltyFee }}</small>
-        </div>
-
-        <div class="field">
           <label for="pawn-date">Pawn Date <b>*</b></label>
           <input
             id="pawn-date"
@@ -271,7 +225,9 @@ function handleSubmit() {
             :aria-invalid="Boolean(errors.pawnDate)"
             @input="clearError('pawnDate')"
           />
-          <small v-if="errors.pawnDate" class="field-error">{{ errors.pawnDate }}</small>
+          <small v-if="errors.pawnDate" class="field-error">{{
+            errors.pawnDate
+          }}</small>
         </div>
       </div>
     </fieldset>
