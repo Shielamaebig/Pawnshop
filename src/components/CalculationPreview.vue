@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { LoanCalculation, LoanSettings, PawnForm } from '../types/pawn'
-import { formatCurrency } from '../utils/calculations'
+import { calculatePercentageAmount, formatCurrency } from '../utils/calculations'
 
 defineProps<{
   form: PawnForm
@@ -11,6 +11,10 @@ defineProps<{
 
 function isVehicleCategory(form: PawnForm): boolean {
   return form.itemCategory === 'Vehicle' || form.itemCategory === 'Vehicle Lending'
+}
+
+function percentageAmount(form: PawnForm, rate: number): string {
+  return formatCurrency(calculatePercentageAmount(form.loanAmount, rate))
 }
 </script>
 
@@ -43,16 +47,20 @@ function isVehicleCategory(form: PawnForm): boolean {
       </div>
       <div>
         <dt>Service Charge</dt>
-        <dd>{{ formatCurrency(settings.serviceCharge) }}</dd>
+        <dd>{{ settings.serviceChargeRate || 0 }}% · {{ percentageAmount(form, settings.serviceChargeRate) }}</dd>
       </div>
       <div v-if="isVehicleCategory(form)">
         <dt>Storage Fee</dt>
-        <dd data-testid="preview-storage-fee">{{ formatCurrency(settings.vehicleStorageFee) }}</dd>
+        <dd data-testid="preview-storage-fee">
+          {{ settings.vehicleStorageRate || 0 }}% ·
+          {{ percentageAmount(form, settings.vehicleStorageRate) }}
+        </dd>
       </div>
       <div>
         <dt>Penalty</dt>
         <dd>
-          {{ formatCurrency(settings.dailyPenaltyFee) }}/day × {{ overdueDays }} days
+          {{ settings.dailyPenaltyRate || 0 }}%/day ·
+          {{ percentageAmount(form, settings.dailyPenaltyRate) }}/day × {{ overdueDays }} days
         </dd>
       </div>
     </dl>

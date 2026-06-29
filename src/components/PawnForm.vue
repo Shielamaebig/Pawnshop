@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { reactive } from "vue";
+import { computed, reactive } from "vue";
 import type { ItemCategory, LoanTerm, PawnForm } from "../types/pawn";
 
 const form = defineModel<PawnForm>({ required: true });
@@ -28,6 +28,12 @@ const terms: Array<{ value: LoanTerm; label: string }> = [
   { value: 90, label: "90 days" },
 ];
 
+const isVehicleCategory = computed(
+  () =>
+    form.value.itemCategory === "Vehicle" ||
+    form.value.itemCategory === "Vehicle Lending",
+);
+
 function clearError(field: FormField) {
   delete errors[field];
 }
@@ -48,6 +54,20 @@ function validate(): boolean {
       errors[field] = `${label} is required.`;
     }
   });
+
+  if (isVehicleCategory.value) {
+    const requiredVehicleFields: Array<{ field: FormField; label: string }> = [
+      { field: "vehicleYear", label: "Vehicle year" },
+      { field: "vehicleBrand", label: "Vehicle brand" },
+      { field: "vehicleModel", label: "Vehicle model" },
+    ];
+
+    requiredVehicleFields.forEach(({ field, label }) => {
+      if (!String(form.value[field]).trim()) {
+        errors[field] = `${label} is required.`;
+      }
+    });
+  }
 
   if (form.value.appraisedValue <= 0) {
     errors.appraisedValue = "Appraised value must be greater than 0.";
@@ -163,6 +183,63 @@ function handleSubmit() {
             {{ errors.itemDescription }}
           </small>
         </div>
+
+        <template v-if="isVehicleCategory">
+          <div class="field">
+            <label for="vehicle-year">Vehicle Year <b>*</b></label>
+            <input
+              id="vehicle-year"
+              v-model.trim="form.vehicleYear"
+              type="text"
+              placeholder="e.g. 2024"
+              :aria-invalid="Boolean(errors.vehicleYear)"
+              @input="clearError('vehicleYear')"
+            />
+            <small v-if="errors.vehicleYear" class="field-error">{{
+              errors.vehicleYear
+            }}</small>
+          </div>
+
+          <div class="field">
+            <label for="vehicle-brand">Vehicle Brand <b>*</b></label>
+            <input
+              id="vehicle-brand"
+              v-model.trim="form.vehicleBrand"
+              type="text"
+              placeholder="e.g. Honda"
+              :aria-invalid="Boolean(errors.vehicleBrand)"
+              @input="clearError('vehicleBrand')"
+            />
+            <small v-if="errors.vehicleBrand" class="field-error">{{
+              errors.vehicleBrand
+            }}</small>
+          </div>
+
+          <div class="field">
+            <label for="vehicle-model">Vehicle Model <b>*</b></label>
+            <input
+              id="vehicle-model"
+              v-model.trim="form.vehicleModel"
+              type="text"
+              placeholder="e.g. Click 125i"
+              :aria-invalid="Boolean(errors.vehicleModel)"
+              @input="clearError('vehicleModel')"
+            />
+            <small v-if="errors.vehicleModel" class="field-error">{{
+              errors.vehicleModel
+            }}</small>
+          </div>
+
+          <div class="field">
+            <label for="vehicle-plate-number">Plate Number <span>(Optional)</span></label>
+            <input
+              id="vehicle-plate-number"
+              v-model.trim="form.vehiclePlateNumber"
+              type="text"
+              placeholder="e.g. ABC 1234"
+            />
+          </div>
+        </template>
       </div>
     </fieldset>
 

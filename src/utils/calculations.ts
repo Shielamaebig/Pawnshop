@@ -29,6 +29,11 @@ export function calculateInterest(
   return roundMoney(Number.isFinite(interest) ? interest : 0)
 }
 
+export function calculatePercentageAmount(amount: number, rate: number): number {
+  const percentageAmount = amount * (rate / 100)
+  return roundMoney(Number.isFinite(percentageAmount) ? percentageAmount : 0)
+}
+
 export function calculateTotalPayable(
   loanAmount: number,
   interestAmount: number,

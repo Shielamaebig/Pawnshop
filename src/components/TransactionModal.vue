@@ -36,6 +36,14 @@ function hasStorageFee(transaction: PawnTransaction): boolean {
   )
 }
 
+function hasVehicleDetails(transaction: PawnTransaction): boolean {
+  return (
+    transaction.itemCategory === 'Vehicle' ||
+    transaction.itemCategory === 'Vehicle Lending' ||
+    Boolean(transaction.vehicleYear || transaction.vehicleBrand || transaction.vehicleModel)
+  )
+}
+
 onMounted(() => {
   document.addEventListener('keydown', handleKeydown)
   closeButton.value?.focus()
@@ -119,6 +127,24 @@ onBeforeUnmount(() => {
           <span>Loan Term</span>
           <strong>{{ transaction.loanTerm }} days</strong>
         </div>
+        <template v-if="hasVehicleDetails(transaction)">
+          <div>
+            <span>Vehicle Year</span>
+            <strong>{{ transaction.vehicleYear || 'N/A' }}</strong>
+          </div>
+          <div>
+            <span>Vehicle Brand</span>
+            <strong>{{ transaction.vehicleBrand || 'N/A' }}</strong>
+          </div>
+          <div>
+            <span>Vehicle Model</span>
+            <strong>{{ transaction.vehicleModel || 'N/A' }}</strong>
+          </div>
+          <div>
+            <span>Plate Number</span>
+            <strong>{{ transaction.vehiclePlateNumber || 'N/A' }}</strong>
+          </div>
+        </template>
       </div>
 
       <div class="description-block">
@@ -133,15 +159,16 @@ onBeforeUnmount(() => {
         </div>
         <div>
           <dt>Service Charge</dt>
-          <dd>{{ formatCurrency(transaction.serviceCharge) }}</dd>
+          <dd>{{ transaction.serviceChargeRate }}% · {{ formatCurrency(transaction.serviceCharge) }}</dd>
         </div>
         <div v-if="hasStorageFee(transaction)">
           <dt>Storage Fee</dt>
-          <dd>{{ formatCurrency(transaction.storageFee) }}</dd>
+          <dd>{{ transaction.storageFeeRate }}% · {{ formatCurrency(transaction.storageFee) }}</dd>
         </div>
         <div>
           <dt>Penalty Fee</dt>
           <dd>
+            {{ transaction.dailyPenaltyRate }}%/day ·
             {{ formatCurrency(transaction.dailyPenaltyFee) }}/day ×
             {{ transaction.overdueDays }} days =
             {{ formatCurrency(transaction.penaltyFee) }}

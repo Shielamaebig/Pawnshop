@@ -20,6 +20,7 @@ import {
   calculateInterest,
   calculateOverdueDays,
   calculatePenalty,
+  calculatePercentageAmount,
   calculateTotalPayable,
 } from './utils/calculations'
 
@@ -40,6 +41,10 @@ function createDefaultForm(): PawnFormModel {
     itemName: '',
     itemCategory: 'Jewelry',
     itemDescription: '',
+    vehicleYear: '',
+    vehicleBrand: '',
+    vehicleModel: '',
+    vehiclePlateNumber: '',
     appraisedValue: 30000,
     loanAmount: 20000,
     loanTerm: 30,
@@ -50,9 +55,9 @@ function createDefaultForm(): PawnFormModel {
 function createDefaultSettings(): LoanSettings {
   return {
     monthlyInterestRate: 7,
-    serviceCharge: 300,
-    vehicleStorageFee: 500,
-    dailyPenaltyFee: 50,
+    serviceChargeRate: 1,
+    vehicleStorageRate: 2,
+    dailyPenaltyRate: 0.5,
   }
 }
 
@@ -70,10 +75,12 @@ function withCurrentPenalty(transaction: PawnTransaction): PawnTransaction {
   }
 
   const overdueDays = calculateOverdueDays(transaction.dueDate, transaction.status)
-  const penaltyFee = calculatePenalty(transaction.dailyPenaltyFee, overdueDays)
+  const dailyPenaltyFee = calculatePercentageAmount(transaction.loanAmount, transaction.dailyPenaltyRate)
+  const penaltyFee = calculatePenalty(dailyPenaltyFee, overdueDays)
 
   return {
     ...transaction,
+    dailyPenaltyFee,
     overdueDays,
     penaltyFee,
     totalPayable: calculateTotalPayable(
@@ -112,11 +119,21 @@ const calculation = computed<LoanCalculation>(() => {
     Number(settings.value.monthlyInterestRate) || 0,
     form.value.loanTerm,
   )
-  const serviceCharge = Number(settings.value.serviceCharge) || 0
+  const serviceCharge = calculatePercentageAmount(
+    Number(form.value.loanAmount) || 0,
+    Number(settings.value.serviceChargeRate) || 0,
+  )
   const storageFee = isVehicleCategory(form.value.itemCategory)
-    ? Number(settings.value.vehicleStorageFee) || 0
+    ? calculatePercentageAmount(
+        Number(form.value.loanAmount) || 0,
+        Number(settings.value.vehicleStorageRate) || 0,
+      )
     : 0
-  const penaltyFee = calculatePenalty(Number(settings.value.dailyPenaltyFee) || 0, formOverdueDays.value)
+  const dailyPenaltyFee = calculatePercentageAmount(
+    Number(form.value.loanAmount) || 0,
+    Number(settings.value.dailyPenaltyRate) || 0,
+  )
+  const penaltyFee = calculatePenalty(dailyPenaltyFee, formOverdueDays.value)
 
   return {
     interestAmount,
@@ -146,17 +163,33 @@ function addTransaction() {
   const dueDate = formDueDate.value
   const overdueDays = formOverdueDays.value
   const storageFee = isVehicleCategory(form.value.itemCategory)
-    ? Number(settings.value.vehicleStorageFee) || 0
+    ? calculatePercentageAmount(
+        Number(form.value.loanAmount) || 0,
+        Number(settings.value.vehicleStorageRate) || 0,
+      )
     : 0
+  const serviceCharge = calculatePercentageAmount(
+    Number(form.value.loanAmount) || 0,
+    Number(settings.value.serviceChargeRate) || 0,
+  )
+  const dailyPenaltyFee = calculatePercentageAmount(
+    Number(form.value.loanAmount) || 0,
+    Number(settings.value.dailyPenaltyRate) || 0,
+  )
 
   transactions.value.unshift({
     ...form.value,
     interestRate: Number(settings.value.monthlyInterestRate) || 0,
-    serviceCharge: Number(settings.value.serviceCharge) || 0,
+    serviceChargeRate: Number(settings.value.serviceChargeRate) || 0,
+    serviceCharge,
+    storageFeeRate: isVehicleCategory(form.value.itemCategory)
+      ? Number(settings.value.vehicleStorageRate) || 0
+      : 0,
     storageFee,
-    dailyPenaltyFee: Number(settings.value.dailyPenaltyFee) || 0,
+    dailyPenaltyRate: Number(settings.value.dailyPenaltyRate) || 0,
+    dailyPenaltyFee,
     overdueDays,
-    penaltyFee: calculatePenalty(Number(settings.value.dailyPenaltyFee) || 0, overdueDays),
+    penaltyFee: calculatePenalty(dailyPenaltyFee, overdueDays),
     dueDate,
     id: createId(),
     ...calculation.value,
@@ -184,12 +217,17 @@ function redeemTransaction(id: string) {
     transaction.id === id
       ? (() => {
           const overdueDays = calculateOverdueDays(transaction.dueDate, 'Redeemed', redeemedDate)
-          const penaltyFee = calculatePenalty(transaction.dailyPenaltyFee, overdueDays)
+          const dailyPenaltyFee = calculatePercentageAmount(
+            transaction.loanAmount,
+            transaction.dailyPenaltyRate,
+          )
+          const penaltyFee = calculatePenalty(dailyPenaltyFee, overdueDays)
 
           return {
             ...transaction,
             status: 'Redeemed',
             redeemedDate,
+            dailyPenaltyFee,
             overdueDays,
             penaltyFee,
             totalPayable: calculateTotalPayable(

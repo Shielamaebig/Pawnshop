@@ -22,9 +22,9 @@ function validateField(field: SettingField, label: string) {
 function validate() {
   Object.keys(errors).forEach((key) => delete errors[key as SettingField])
   validateField('monthlyInterestRate', 'Monthly interest rate')
-  validateField('serviceCharge', 'Service charge')
-  validateField('vehicleStorageFee', 'Vehicle storage fee')
-  validateField('dailyPenaltyFee', 'Daily penalty fee')
+  validateField('serviceChargeRate', 'Service charge rate')
+  validateField('vehicleStorageRate', 'Vehicle storage rate')
+  validateField('dailyPenaltyRate', 'Daily penalty rate')
 }
 </script>
 
@@ -60,60 +60,62 @@ function validate() {
       </div>
 
       <div class="field">
-        <label for="service-charge">Service Charge</label>
-        <div class="money-input">
-          <span>₱</span>
+        <label for="service-charge-rate">Service Charge Rate</label>
+        <div class="suffix-input">
           <input
-            id="service-charge"
-            v-model.number="settings.serviceCharge"
+            id="service-charge-rate"
+            v-model.number="settings.serviceChargeRate"
             type="number"
             min="0"
-            step="50"
-            :aria-invalid="Boolean(errors.serviceCharge)"
+            step="0.1"
+            :aria-invalid="Boolean(errors.serviceChargeRate)"
             @blur="validate"
-            @input="clearError('serviceCharge')"
+            @input="clearError('serviceChargeRate')"
           />
+          <span>%</span>
         </div>
-        <small v-if="errors.serviceCharge" class="field-error">{{ errors.serviceCharge }}</small>
-      </div>
-
-      <div class="field">
-        <label for="vehicle-storage-fee">Vehicle Storage Fee</label>
-        <div class="money-input">
-          <span>₱</span>
-          <input
-            id="vehicle-storage-fee"
-            v-model.number="settings.vehicleStorageFee"
-            type="number"
-            min="0"
-            step="50"
-            :aria-invalid="Boolean(errors.vehicleStorageFee)"
-            @blur="validate"
-            @input="clearError('vehicleStorageFee')"
-          />
-        </div>
-        <small v-if="errors.vehicleStorageFee" class="field-error">
-          {{ errors.vehicleStorageFee }}
+        <small v-if="errors.serviceChargeRate" class="field-error">
+          {{ errors.serviceChargeRate }}
         </small>
       </div>
 
       <div class="field">
-        <label for="daily-penalty-fee">Daily Penalty Fee</label>
-        <div class="money-input">
-          <span>₱</span>
+        <label for="vehicle-storage-rate">Vehicle Storage Rate</label>
+        <div class="suffix-input">
           <input
-            id="daily-penalty-fee"
-            v-model.number="settings.dailyPenaltyFee"
+            id="vehicle-storage-rate"
+            v-model.number="settings.vehicleStorageRate"
             type="number"
             min="0"
-            step="50"
-            :aria-invalid="Boolean(errors.dailyPenaltyFee)"
+            step="0.1"
+            :aria-invalid="Boolean(errors.vehicleStorageRate)"
             @blur="validate"
-            @input="clearError('dailyPenaltyFee')"
+            @input="clearError('vehicleStorageRate')"
           />
+          <span>%</span>
         </div>
-        <small v-if="errors.dailyPenaltyFee" class="field-error">
-          {{ errors.dailyPenaltyFee }}
+        <small v-if="errors.vehicleStorageRate" class="field-error">
+          {{ errors.vehicleStorageRate }}
+        </small>
+      </div>
+
+      <div class="field">
+        <label for="daily-penalty-rate">Daily Penalty Rate <span>(Per day)</span></label>
+        <div class="suffix-input">
+          <input
+            id="daily-penalty-rate"
+            v-model.number="settings.dailyPenaltyRate"
+            type="number"
+            min="0"
+            step="0.1"
+            :aria-invalid="Boolean(errors.dailyPenaltyRate)"
+            @blur="validate"
+            @input="clearError('dailyPenaltyRate')"
+          />
+          <span>%</span>
+        </div>
+        <small v-if="errors.dailyPenaltyRate" class="field-error">
+          {{ errors.dailyPenaltyRate }}
         </small>
       </div>
     </div>

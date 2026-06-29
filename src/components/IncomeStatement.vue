@@ -55,9 +55,16 @@ const totals = computed(() =>
               <strong>{{ transaction.interestRate }}%</strong>
               <span class="cell-secondary">{{ formatCurrency(transaction.interestAmount) }}</span>
             </td>
-            <td>{{ formatCurrency(transaction.serviceCharge) }}</td>
-            <td>{{ formatCurrency(transaction.storageFee) }}</td>
             <td>
+              {{ transaction.serviceChargeRate }}% ·
+              {{ formatCurrency(transaction.serviceCharge) }}
+            </td>
+            <td>
+              {{ transaction.storageFeeRate }}% ·
+              {{ formatCurrency(transaction.storageFee) }}
+            </td>
+            <td>
+              {{ transaction.dailyPenaltyRate }}%/day ·
               {{ formatCurrency(transaction.dailyPenaltyFee) }}/day ×
               {{ transaction.overdueDays }} days
             </td>

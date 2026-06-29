@@ -12,9 +12,9 @@ export type ItemCategory =
 
 export interface LoanSettings {
   monthlyInterestRate: number;
-  serviceCharge: number;
-  vehicleStorageFee: number;
-  dailyPenaltyFee: number;
+  serviceChargeRate: number;
+  vehicleStorageRate: number;
+  dailyPenaltyRate: number;
 }
 
 export interface PawnForm {
@@ -23,6 +23,10 @@ export interface PawnForm {
   itemName: string;
   itemCategory: ItemCategory;
   itemDescription: string;
+  vehicleYear: string;
+  vehicleBrand: string;
+  vehicleModel: string;
+  vehiclePlateNumber: string;
   appraisedValue: number;
   loanAmount: number;
   loanTerm: LoanTerm;
@@ -32,8 +36,11 @@ export interface PawnForm {
 export interface PawnTransaction extends PawnForm {
   id: string;
   interestRate: number;
+  serviceChargeRate: number;
   serviceCharge: number;
+  storageFeeRate: number;
   storageFee: number;
+  dailyPenaltyRate: number;
   dailyPenaltyFee: number;
   overdueDays: number;
   penaltyFee: number;
