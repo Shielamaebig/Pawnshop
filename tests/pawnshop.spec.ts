@@ -4,15 +4,41 @@ test('calculates, validates, and manages an in-memory transaction', async ({ pag
   await page.goto('/')
 
   await expect(page.getByRole('heading', { name: 'Pawnshop Lending Prototype' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Dashboard' })).toHaveClass(/view-tab--active/)
+  await expect(page.getByRole('button', { name: 'Income Statement' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Loan Details' })).toBeVisible()
+  await expect(page.getByLabel('Item Category *')).toContainText('Vehicle Lending')
   await expect(page.getByTestId('total-loans')).toHaveText('₱81,000.00')
-  await expect(page.getByTestId('total-interest')).toHaveText('₱4,565.00')
-  await expect(page.getByTestId('total-earnings')).toHaveText('₱6,215.00')
+  await expect(page.getByTestId('total-interest')).toHaveText('₱9,100.00')
+  await expect(page.getByTestId('total-earnings')).toHaveText('₱10,900.00')
   await expect(page.getByTestId('total-transactions')).toHaveText('4')
 
+  await page.getByRole('button', { name: 'Loan Details' }).click()
+  await expect(page.getByRole('heading', { name: 'Loan Details' })).toBeVisible()
+  await expect(page.getByLabel('Monthly Interest Rate')).toHaveValue('7')
+  await expect(page.getByLabel('Service Charge')).toHaveValue('300')
+  await page.getByLabel('Monthly Interest Rate').fill('8')
+  await page.getByLabel('Service Charge').fill('400')
+
+  await page.getByRole('button', { name: 'Dashboard' }).click()
+  await expect(page.getByTestId('preview-interest')).toHaveText('₱1,600.00')
+  await expect(page.getByTestId('preview-payable')).toHaveText('₱22,000.00')
+  await expect(page.getByTestId('preview-earning')).toHaveText('₱2,000.00')
+
+  await page.getByRole('button', { name: 'Loan Details' }).click()
+  await page.getByLabel('Monthly Interest Rate').fill('7')
+  await page.getByLabel('Service Charge').fill('300')
+  await page.getByRole('button', { name: 'Dashboard' }).click()
+
   await page.getByLabel('Loan Term *').selectOption('90')
-  await expect(page.getByTestId('preview-interest')).toHaveText('₱1,800.00')
-  await expect(page.getByTestId('preview-payable')).toHaveText('₱22,100.00')
-  await expect(page.getByTestId('preview-earning')).toHaveText('₱2,100.00')
+  await expect(page.getByTestId('preview-interest')).toHaveText('₱4,200.00')
+  await expect(page.getByTestId('preview-payable')).toHaveText('₱24,500.00')
+  await expect(page.getByTestId('preview-earning')).toHaveText('₱4,500.00')
+
+  await page.getByLabel('Item Category *').selectOption('Vehicle')
+  await expect(page.getByTestId('preview-storage-fee')).toHaveText('₱500.00')
+  await expect(page.getByTestId('preview-payable')).toHaveText('₱25,000.00')
+  await expect(page.getByTestId('preview-earning')).toHaveText('₱5,000.00')
 
   await page.getByTestId('add-transaction').click()
   await expect(page.getByRole('alert')).toContainText('Please review')
@@ -22,26 +48,25 @@ test('calculates, validates, and manages an in-memory transaction', async ({ pag
   await page.getByLabel('Contact Number *').fill('0917 555 0182')
   await page.getByLabel('Item Name *').fill('MacBook Air M2')
   await page.getByLabel('Item Category *').selectOption('Gadget')
+  await expect(page.getByTestId('preview-storage-fee')).toHaveCount(0)
   await page
     .getByLabel('Item Description *')
     .fill('13-inch laptop, 8 GB RAM, 256 GB storage, charger included.')
   await page.getByLabel('Appraised Value *').fill('40000')
   await page.getByLabel('Loan Amount *').fill('45000')
-  await page.getByLabel('Interest Rate *').fill('4')
   await page.getByLabel('Loan Term *').selectOption('60')
-  await page.getByLabel('Service Fee *').fill('400')
-  await page.getByLabel('Penalty Fee (Optional)').fill('100')
   await page.getByTestId('add-transaction').click()
   await expect(page.getByText('Loan amount cannot exceed the appraised value.')).toBeVisible()
 
   await page.getByLabel('Loan Amount *').fill('30000')
-  await expect(page.getByTestId('preview-interest')).toHaveText('₱2,400.00')
-  await expect(page.getByTestId('preview-payable')).toHaveText('₱32,900.00')
-  await expect(page.getByTestId('preview-earning')).toHaveText('₱2,900.00')
+  await expect(page.getByTestId('preview-interest')).toHaveText('₱4,200.00')
+  await expect(page.getByTestId('preview-payable')).toHaveText('₱34,500.00')
+  await expect(page.getByTestId('preview-earning')).toHaveText('₱4,500.00')
   await page.getByTestId('add-transaction').click()
 
   await expect(page.getByTestId('total-transactions')).toHaveText('5')
   await expect(page.getByTestId('total-loans')).toHaveText('₱111,000.00')
+  await expect(page.getByTestId('total-interest')).toHaveText('₱13,300.00')
   const transactionRow = page.locator('tbody tr').filter({ hasText: 'Ana Villanueva' })
   await expect(transactionRow).toHaveCount(1)
   await expect(transactionRow).toContainText('Active')
@@ -56,6 +81,18 @@ test('calculates, validates, and manages an in-memory transaction', async ({ pag
     .click()
   await expect(transactionRow).toContainText('Redeemed')
 
+  await page.getByRole('button', { name: 'Income Statement' }).click()
+  await expect(page.getByRole('heading', { name: 'Income Statement' })).toBeVisible()
+  await expect(page.locator('tbody tr')).toHaveCount(5)
+  await expect(page.locator('tbody tr').filter({ hasText: 'Honda Click 125i' })).toContainText(
+    '₱500.00',
+  )
+  await expect(page.locator('tbody tr').filter({ hasText: 'Samsung Smart TV' })).toContainText(
+    '₱50.00/day × 2 days',
+  )
+  await expect(page.locator('tfoot')).toContainText('₱13,300.00')
+
+  await page.getByRole('button', { name: 'Dashboard' }).click()
   await transactionRow.getByRole('button', { name: "Delete Ana Villanueva's transaction" }).click()
   await transactionRow.getByRole('button', { name: 'Yes' }).click()
   await expect(page.getByTestId('total-transactions')).toHaveText('4')
@@ -72,6 +109,10 @@ test('keeps the dashboard within a mobile viewport', async ({ page }) => {
   await expect(page.getByRole('heading', { name: 'Pawnshop Lending Prototype' })).toBeVisible()
   await expect(page.locator('.summary-card')).toHaveCount(4)
   await expect(page.locator('.table-scroll')).toBeVisible()
+  await page.getByRole('button', { name: 'Income Statement' }).click()
+  await expect(page.getByRole('heading', { name: 'Income Statement' })).toBeVisible()
+  await page.getByRole('button', { name: 'Loan Details' }).click()
+  await expect(page.getByRole('heading', { name: 'Loan Details' })).toBeVisible()
 
   const hasPageOverflow = await page.evaluate(
     () => document.documentElement.scrollWidth > window.innerWidth,

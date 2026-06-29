@@ -1,17 +1,31 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import CalculationPreview from './components/CalculationPreview.vue'
+import IncomeStatement from './components/IncomeStatement.vue'
+import LoanDetails from './components/LoanDetails.vue'
 import PawnForm from './components/PawnForm.vue'
 import SummaryCards from './components/SummaryCards.vue'
 import TransactionModal from './components/TransactionModal.vue'
 import TransactionTable from './components/TransactionTable.vue'
 import { sampleTransactions } from './data/sampleTransactions'
-import type { LoanCalculation, PawnForm as PawnFormModel, PawnTransaction } from './types/pawn'
+import type {
+  LoanCalculation,
+  LoanSettings,
+  PawnForm as PawnFormModel,
+  PawnTransaction,
+} from './types/pawn'
 import {
+  addDays,
   calculateExpectedEarning,
   calculateInterest,
+  calculateOverdueDays,
+  calculatePenalty,
   calculateTotalPayable,
 } from './utils/calculations'
+
+type AppView = 'Dashboard' | 'Income Statement' | 'Loan Details'
+
+const views: AppView[] = ['Dashboard', 'Income Statement', 'Loan Details']
 
 function localIsoDate(): string {
   const now = new Date()
@@ -28,11 +42,17 @@ function createDefaultForm(): PawnFormModel {
     itemDescription: '',
     appraisedValue: 30000,
     loanAmount: 20000,
-    interestRate: 3,
     loanTerm: 30,
-    serviceFee: 300,
-    penaltyFee: 0,
     pawnDate: localIsoDate(),
+  }
+}
+
+function createDefaultSettings(): LoanSettings {
+  return {
+    monthlyInterestRate: 7,
+    serviceCharge: 300,
+    vehicleStorageFee: 500,
+    dailyPenaltyFee: 50,
   }
 }
 
@@ -40,35 +60,79 @@ function createId(): string {
   return globalThis.crypto?.randomUUID?.() ?? `pawn-${Date.now()}-${Math.random().toString(16).slice(2)}`
 }
 
+function isVehicleCategory(itemCategory: PawnFormModel['itemCategory']): boolean {
+  return itemCategory === 'Vehicle' || itemCategory === 'Vehicle Lending'
+}
+
+function withCurrentPenalty(transaction: PawnTransaction): PawnTransaction {
+  if (transaction.status !== 'Active') {
+    return transaction
+  }
+
+  const overdueDays = calculateOverdueDays(transaction.dueDate, transaction.status)
+  const penaltyFee = calculatePenalty(transaction.dailyPenaltyFee, overdueDays)
+
+  return {
+    ...transaction,
+    overdueDays,
+    penaltyFee,
+    totalPayable: calculateTotalPayable(
+      transaction.loanAmount,
+      transaction.interestAmount,
+      transaction.serviceCharge,
+      transaction.storageFee,
+      penaltyFee,
+    ),
+    expectedEarning: calculateExpectedEarning(
+      transaction.interestAmount,
+      transaction.serviceCharge,
+      transaction.storageFee,
+      penaltyFee,
+    ),
+  }
+}
+
 const form = ref<PawnFormModel>(createDefaultForm())
+const settings = ref<LoanSettings>(createDefaultSettings())
+const activeView = ref<AppView>('Dashboard')
 const transactions = ref<PawnTransaction[]>(
   sampleTransactions.map((transaction) => ({ ...transaction })),
 )
 const selectedTransaction = ref<PawnTransaction | null>(null)
+const currentTransactions = computed(() =>
+  transactions.value.map((transaction) => withCurrentPenalty(transaction)),
+)
+
+const formDueDate = computed(() => addDays(form.value.pawnDate, form.value.loanTerm))
+const formOverdueDays = computed(() => calculateOverdueDays(formDueDate.value, 'Active'))
 
 const calculation = computed<LoanCalculation>(() => {
   const interestAmount = calculateInterest(
     Number(form.value.loanAmount) || 0,
-    Number(form.value.interestRate) || 0,
+    Number(settings.value.monthlyInterestRate) || 0,
     form.value.loanTerm,
   )
-  const serviceFee = Number(form.value.serviceFee) || 0
-  const penaltyFee = Number(form.value.penaltyFee) || 0
+  const serviceCharge = Number(settings.value.serviceCharge) || 0
+  const storageFee = isVehicleCategory(form.value.itemCategory)
+    ? Number(settings.value.vehicleStorageFee) || 0
+    : 0
+  const penaltyFee = calculatePenalty(Number(settings.value.dailyPenaltyFee) || 0, formOverdueDays.value)
 
   return {
     interestAmount,
     totalPayable: calculateTotalPayable(
       Number(form.value.loanAmount) || 0,
       interestAmount,
-      serviceFee,
+      serviceCharge,
+      storageFee,
       penaltyFee,
     ),
-    expectedEarning: calculateExpectedEarning(interestAmount, serviceFee, penaltyFee),
+    expectedEarning: calculateExpectedEarning(interestAmount, serviceCharge, storageFee, penaltyFee),
   }
 })
 
 const totals = computed(() =>
-  transactions.value.reduce(
+  currentTransactions.value.reduce(
     (summary, transaction) => ({
       loanAmount: summary.loanAmount + transaction.loanAmount,
       interest: summary.interest + transaction.interestAmount,
@@ -79,8 +143,21 @@ const totals = computed(() =>
 )
 
 function addTransaction() {
+  const dueDate = formDueDate.value
+  const overdueDays = formOverdueDays.value
+  const storageFee = isVehicleCategory(form.value.itemCategory)
+    ? Number(settings.value.vehicleStorageFee) || 0
+    : 0
+
   transactions.value.unshift({
     ...form.value,
+    interestRate: Number(settings.value.monthlyInterestRate) || 0,
+    serviceCharge: Number(settings.value.serviceCharge) || 0,
+    storageFee,
+    dailyPenaltyFee: Number(settings.value.dailyPenaltyFee) || 0,
+    overdueDays,
+    penaltyFee: calculatePenalty(Number(settings.value.dailyPenaltyFee) || 0, overdueDays),
+    dueDate,
     id: createId(),
     ...calculation.value,
     status: 'Active',
@@ -89,7 +166,7 @@ function addTransaction() {
 }
 
 function viewTransaction(transaction: PawnTransaction) {
-  selectedTransaction.value = transaction
+  selectedTransaction.value = withCurrentPenalty(transaction)
 }
 
 function deleteTransaction(id: string) {
@@ -101,12 +178,40 @@ function deleteTransaction(id: string) {
 }
 
 function redeemTransaction(id: string) {
+  const redeemedDate = localIsoDate()
+
   transactions.value = transactions.value.map((transaction) =>
-    transaction.id === id ? { ...transaction, status: 'Redeemed' } : transaction,
+    transaction.id === id
+      ? (() => {
+          const overdueDays = calculateOverdueDays(transaction.dueDate, 'Redeemed', redeemedDate)
+          const penaltyFee = calculatePenalty(transaction.dailyPenaltyFee, overdueDays)
+
+          return {
+            ...transaction,
+            status: 'Redeemed',
+            redeemedDate,
+            overdueDays,
+            penaltyFee,
+            totalPayable: calculateTotalPayable(
+              transaction.loanAmount,
+              transaction.interestAmount,
+              transaction.serviceCharge,
+              transaction.storageFee,
+              penaltyFee,
+            ),
+            expectedEarning: calculateExpectedEarning(
+              transaction.interestAmount,
+              transaction.serviceCharge,
+              transaction.storageFee,
+              penaltyFee,
+            ),
+          }
+        })()
+      : transaction,
   )
 
   if (selectedTransaction.value?.id === id) {
-    selectedTransaction.value = { ...selectedTransaction.value, status: 'Redeemed' }
+    selectedTransaction.value = transactions.value.find((transaction) => transaction.id === id) ?? null
   }
 }
 </script>
@@ -139,24 +244,47 @@ function redeemTransaction(id: string) {
         </div>
       </section>
 
+      <nav class="view-tabs" aria-label="Workspace views">
+        <button
+          v-for="view in views"
+          :key="view"
+          type="button"
+          :class="{ 'view-tab--active': activeView === view }"
+          @click="activeView = view"
+        >
+          {{ view }}
+        </button>
+      </nav>
+
       <SummaryCards
+        v-if="activeView === 'Dashboard'"
         :total-loan-amount="totals.loanAmount"
         :total-interest="totals.interest"
         :total-earnings="totals.earnings"
-        :total-transactions="transactions.length"
+        :total-transactions="currentTransactions.length"
       />
 
-      <section class="workspace-grid">
+      <section v-if="activeView === 'Dashboard'" class="workspace-grid">
         <PawnForm v-model="form" @submit="addTransaction" />
-        <CalculationPreview :form="form" :calculation="calculation" />
+        <CalculationPreview
+          :form="form"
+          :settings="settings"
+          :calculation="calculation"
+          :overdue-days="formOverdueDays"
+        />
       </section>
 
       <TransactionTable
-        :transactions="transactions"
+        v-if="activeView === 'Dashboard'"
+        :transactions="currentTransactions"
         @view="viewTransaction"
         @delete="deleteTransaction"
         @redeem="redeemTransaction"
       />
+
+      <IncomeStatement v-if="activeView === 'Income Statement'" :transactions="currentTransactions" />
+
+      <LoanDetails v-if="activeView === 'Loan Details'" v-model="settings" />
     </main>
 
     <footer>

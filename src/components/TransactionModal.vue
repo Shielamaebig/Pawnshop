@@ -28,6 +28,14 @@ function formatDate(value: string): string {
   }).format(new Date(`${value}T00:00:00Z`))
 }
 
+function hasStorageFee(transaction: PawnTransaction): boolean {
+  return (
+    transaction.itemCategory === 'Vehicle' ||
+    transaction.itemCategory === 'Vehicle Lending' ||
+    transaction.storageFee > 0
+  )
+}
+
 onMounted(() => {
   document.addEventListener('keydown', handleKeydown)
   closeButton.value?.focus()
@@ -88,6 +96,14 @@ onBeforeUnmount(() => {
           <strong>{{ formatDate(transaction.pawnDate) }}</strong>
         </div>
         <div>
+          <span>Due Date</span>
+          <strong>{{ formatDate(transaction.dueDate) }}</strong>
+        </div>
+        <div v-if="transaction.redeemedDate">
+          <span>Redeemed Date</span>
+          <strong>{{ formatDate(transaction.redeemedDate) }}</strong>
+        </div>
+        <div>
           <span>Appraised Value</span>
           <strong>{{ formatCurrency(transaction.appraisedValue) }}</strong>
         </div>
@@ -116,12 +132,20 @@ onBeforeUnmount(() => {
           <dd>{{ formatCurrency(transaction.interestAmount) }}</dd>
         </div>
         <div>
-          <dt>Service Fee</dt>
-          <dd>{{ formatCurrency(transaction.serviceFee) }}</dd>
+          <dt>Service Charge</dt>
+          <dd>{{ formatCurrency(transaction.serviceCharge) }}</dd>
+        </div>
+        <div v-if="hasStorageFee(transaction)">
+          <dt>Storage Fee</dt>
+          <dd>{{ formatCurrency(transaction.storageFee) }}</dd>
         </div>
         <div>
           <dt>Penalty Fee</dt>
-          <dd>{{ formatCurrency(transaction.penaltyFee) }}</dd>
+          <dd>
+            {{ formatCurrency(transaction.dailyPenaltyFee) }}/day ×
+            {{ transaction.overdueDays }} days =
+            {{ formatCurrency(transaction.penaltyFee) }}
+          </dd>
         </div>
         <div class="modal-total">
           <dt>Total Payable</dt>
